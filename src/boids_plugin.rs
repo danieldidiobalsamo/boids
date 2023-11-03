@@ -1,10 +1,11 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use rand::{Rng, SeedableRng};
 
 pub struct BoidsPlugin;
 
 impl Plugin for BoidsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Settings::new(100))
+        app.insert_resource(Settings::new(200))
             .add_systems(Startup, (spawn_camera, spawn_boids))
             .add_systems(Update, (move_boids, project_positions.after(move_boids)));
     }
@@ -80,24 +81,27 @@ pub fn spawn_boids(
     mut materials: ResMut<Assets<ColorMaterial>>,
     settings: Res<Settings>,
 ) {
-    let mesh = Mesh::from(shape::Circle::new(3.));
+    let mesh = Mesh::from(shape::Circle::new(4.));
     let material = ColorMaterial::from(Color::rgb(1., 1., 1.));
 
     let mesh_handle = meshes.add(mesh);
     let material_handle = materials.add(material);
 
-    for i in 0..settings.nb_boids as u32 {
-        let pos = Vec2::new(i as f32 * 5., i as f32 * 5.);
+    for _ in 0..settings.nb_boids as u32 {
+        let pos = Vec2::new(
+            rand::thread_rng().gen_range(100..=300) as f32,
+            rand::thread_rng().gen_range(100..=300) as f32,
+        );
         let bundle = BoidBundle::new(
             pos,
             BoidParameters {
-                turn_factor: 0.5,
+                turn_factor: 0.2,
                 visual_range: 40,
-                protected_range: 8,
+                protected_range: 10,
                 centering_factor: 0.0005,
-                avoid_factor: 0.05,
+                avoid_factor: 0.3,
                 matching_factor: 0.05,
-                max_speed: 6.,
+                max_speed: 8.,
                 min_speed: 3.,
                 max_bias: 0.01,
                 bias_increment: 0.00004,
@@ -141,18 +145,15 @@ impl BoidEstimate {
 }
 
 fn evaluate_situation(
-    current: &(Mut<Position>, Mut<Velocity>, &BoidParameters),
-    other: &(Mut<Position>, Mut<Velocity>, &BoidParameters),
-) -> BoidEstimate {
+    current: &(&Position, &Velocity, &BoidParameters),
+    other: &(&Position, &Velocity, &BoidParameters),
+    estimate: &mut BoidEstimate,
+) {
     let (pos, _, params) = current;
     let visual_range = params.visual_range as f32;
     let protected_range = params.protected_range as f32;
 
     let (other_pos, other_v, _) = other;
-
-    let [mut xpos_avg, mut ypos_avg, mut xvel_avg, mut yvel_avg, mut close_dx, mut close_dy] =
-        [0.; 6];
-    let mut neighboring_boids = 0;
 
     let dx = pos.0.x - other_pos.0.x;
     let dy = pos.0.y - other_pos.0.y;
@@ -161,26 +162,16 @@ fn evaluate_situation(
         let squared_distance = dx * dx + dy * dy;
 
         if squared_distance < protected_range * protected_range {
-            close_dx += pos.0.x - other_pos.0.x;
-            close_dy += pos.0.y - other_pos.0.y;
+            estimate.close_dx += pos.0.x - other_pos.0.x;
+            estimate.close_dy += pos.0.y - other_pos.0.y;
         } else if squared_distance < visual_range * visual_range {
-            xpos_avg += other_pos.0.x;
-            ypos_avg += other_pos.0.y;
-            xvel_avg += other_v.0.x;
-            yvel_avg += other_v.0.y;
+            estimate.xpos_avg += other_pos.0.x;
+            estimate.ypos_avg += other_pos.0.y;
+            estimate.xvel_avg += other_v.0.x;
+            estimate.yvel_avg += other_v.0.y;
 
-            neighboring_boids += 1
+            estimate.neighboring_boids += 1
         }
-    }
-
-    BoidEstimate {
-        xpos_avg,
-        ypos_avg,
-        xvel_avg,
-        yvel_avg,
-        neighboring_boids,
-        close_dx,
-        close_dy,
     }
 }
 
@@ -295,11 +286,12 @@ fn move_boids(
     if let Ok(window) = window.get_single() {
         let (width, height) = (window.resolution.width(), window.resolution.height());
 
-        let mut combinations = boids.iter_combinations_mut();
+        let mut combinations = boids.iter_combinations();
 
         let mut estimate = BoidEstimate::new();
         while let Some([current, other]) = combinations.fetch_next() {
-            estimate = evaluate_situation(&current, &other);
+            evaluate_situation(&current, &other, &mut estimate);
+            evaluate_situation(&other, &current, &mut estimate);
         }
 
         for mut boid in &mut boids {
