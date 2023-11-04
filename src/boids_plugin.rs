@@ -81,6 +81,12 @@ impl Default for Settings {
 }
 
 #[derive(Component, Debug)]
+enum BoidRole {
+    Common,
+    Scout(u8),
+}
+
+#[derive(Component, Debug)]
 struct Boid;
 
 #[derive(Component, Debug)]
@@ -94,14 +100,16 @@ struct BoidBundle {
     boid: Boid,
     position: Position,
     velocity: Velocity,
+    role: BoidRole,
 }
 
 impl BoidBundle {
-    fn new(pos: Vec2) -> Self {
+    fn new(pos: Vec2, role: BoidRole) -> Self {
         Self {
             boid: Boid,
             position: Position(Vec3::new(pos.x, pos.y, 0.)),
             velocity: Velocity(Vec3::new(0., 0., 0.)),
+            role,
         }
     }
 }
@@ -133,7 +141,15 @@ pub fn spawn_boids(
             rand::thread_rng().gen_range(100..=300) as f32,
             rand::thread_rng().gen_range(100..=300) as f32,
         );
-        let bundle = BoidBundle::new(pos);
+
+        let role = match rand::thread_rng().gen_range(0..=100) {
+            x if x < 30 => BoidRole::Common,
+            x if x >= 30 && x < 70_ => BoidRole::Scout(1),
+            x if x >= 70 => BoidRole::Scout(2),
+            _ => BoidRole::Common,
+        };
+
+        let bundle = BoidBundle::new(pos, role);
 
         commands.spawn((
             bundle,
@@ -171,16 +187,16 @@ impl BoidEstimate {
 }
 
 fn evaluate_situation(
-    current: &(&Position, &Velocity),
-    other: &(&Position, &Velocity),
+    current: &(&Position, &Velocity, &BoidRole),
+    other: &(&Position, &Velocity, &BoidRole),
     estimate: &mut BoidEstimate,
     settings: &Res<Settings>,
 ) {
-    let (pos, _) = current;
+    let (pos, _, _) = current;
     let visual_range = settings.visual_range as f32;
     let protected_range = settings.protected_range as f32;
 
-    let (other_pos, other_v) = other;
+    let (other_pos, other_v, _) = other;
 
     let dx = pos.0.x - other_pos.0.x;
     let dy = pos.0.y - other_pos.0.y;
@@ -203,11 +219,11 @@ fn evaluate_situation(
 }
 
 fn apply_cohesion_and_alignment(
-    current: &mut (Mut<Position>, Mut<Velocity>),
+    current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
     estimate: &mut BoidEstimate,
     settings: &Res<Settings>,
 ) {
-    let (pos, v) = current;
+    let (pos, v, _) = current;
     let centering_factor = settings.centering_factor;
     let matching_factor = settings.matching_factor;
 
@@ -230,11 +246,11 @@ fn apply_cohesion_and_alignment(
 }
 
 fn apply_avoidance(
-    current: &mut (Mut<Position>, Mut<Velocity>),
+    current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
     estimate: &BoidEstimate,
     settings: &Res<Settings>,
 ) {
-    let (_, v) = current;
+    let (_, v, _) = current;
     let avoid_factor = settings.avoid_factor;
 
     v.0.x += estimate.close_dx * avoid_factor;
@@ -242,11 +258,11 @@ fn apply_avoidance(
 }
 
 fn turn_if_edge(
-    current: &mut (Mut<Position>, Mut<Velocity>),
+    current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
     screen_dimensions: (f32, f32),
     settings: &Res<Settings>,
 ) {
-    let (pos, v) = current;
+    let (pos, v, _) = current;
     let (x, y) = (pos.0.x, pos.0.y);
     let (width, height) = screen_dimensions;
     let turn_factor = settings.turn_factor;
@@ -264,16 +280,22 @@ fn turn_if_edge(
     }
 }
 
-fn apply_bias(current: &mut (Mut<Position>, Mut<Velocity>), settings: &Res<Settings>) {
-    // TODO : change bias when coding scout groups
-
-    let (_, v) = current;
+fn apply_bias(current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole), settings: &Res<Settings>) {
+    let (_, v, role) = current;
     let bias = settings.bias;
 
-    v.0.x = (1. - bias) * v.0.x + bias;
+    match **role {
+        BoidRole::Scout(1) => v.0.x = (1. - bias) * v.0.x + bias,
+        BoidRole::Scout(2) => v.0.x = (1. - bias) * v.0.x - bias,
+        BoidRole::Common => (),
+        _ => (),
+    };
 }
-fn compute_new_speed(current: &mut (Mut<Position>, Mut<Velocity>), settings: &Res<Settings>) {
-    let (_, v) = current;
+fn compute_new_speed(
+    current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
+    settings: &Res<Settings>,
+) {
+    let (_, v, _) = current;
     let min_speed = settings.min_speed;
     let max_speed = settings.max_speed;
 
@@ -290,10 +312,10 @@ fn compute_new_speed(current: &mut (Mut<Position>, Mut<Velocity>), settings: &Re
 }
 
 fn compute_new_position(
-    current: &mut (Mut<Position>, Mut<Velocity>),
+    current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
     screen_dimensions: (f32, f32),
 ) {
-    let (pos, v) = current;
+    let (pos, v, _) = current;
     pos.0.x += v.0.x;
     pos.0.y += v.0.y;
 
@@ -313,7 +335,7 @@ fn compute_new_position(
 }
 
 fn move_boids(
-    mut boids: Query<(&mut Position, &mut Velocity), With<Boid>>,
+    mut boids: Query<(&mut Position, &mut Velocity, &BoidRole), With<Boid>>,
     window: Query<&Window>,
     settings: Res<Settings>,
 ) {
