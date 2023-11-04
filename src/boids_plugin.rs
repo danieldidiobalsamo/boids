@@ -14,7 +14,7 @@ impl Plugin for BoidsPlugin {
 }
 
 #[derive(Resource)]
-pub struct Settings {
+struct Settings {
     nb_boids: u32,
     turn_factor: f32,
     visual_range: u32,
@@ -124,7 +124,7 @@ fn project_positions(mut positionables: Query<(&mut Transform, &Position)>) {
     }
 }
 
-pub fn spawn_boids(
+fn spawn_boids(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
