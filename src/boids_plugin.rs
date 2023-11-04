@@ -58,15 +58,15 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            nb_boids: 200,
+            nb_boids: 100,
             turn_factor: 0.2,
             visual_range: 40,
             protected_range: 10,
             centering_factor: 0.0005,
-            avoid_factor: 0.3,
-            matching_factor: 0.05,
-            max_speed: 8.,
-            min_speed: 3.,
+            avoid_factor: 0.05,
+            matching_factor: 0.5,
+            max_speed: 10.,
+            min_speed: 2.,
             bias: 0.005,
         }
     }
