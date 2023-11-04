@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
-use rand::{Rng, SeedableRng};
+use rand::Rng;
 
 pub struct BoidsPlugin;
 
@@ -24,8 +24,6 @@ struct Settings {
     matching_factor: f32,
     max_speed: f32,
     min_speed: f32,
-    max_bias: f32,
-    bias_increment: f32,
     bias: f32,
 }
 
@@ -40,8 +38,6 @@ impl Settings {
         matching_factor: f32,
         max_speed: f32,
         min_speed: f32,
-        max_bias: f32,
-        bias_increment: f32,
         bias: f32,
     ) -> Self {
         Self {
@@ -54,8 +50,6 @@ impl Settings {
             matching_factor,
             max_speed,
             min_speed,
-            max_bias,
-            bias_increment,
             bias,
         }
     }
@@ -73,8 +67,6 @@ impl Default for Settings {
             matching_factor: 0.05,
             max_speed: 8.,
             min_speed: 3.,
-            max_bias: 0.01,
-            bias_increment: 0.00004,
             bias: 0.005,
         }
     }
