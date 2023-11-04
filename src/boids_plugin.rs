@@ -135,9 +135,9 @@ fn spawn_boids(
         );
 
         let role = match rand::thread_rng().gen_range(0..=100) {
-            x if x < 30 => BoidRole::Common,
-            x if x >= 30 && x < 70_ => BoidRole::Scout(1),
-            x if x >= 70 => BoidRole::Scout(2),
+            x if x >= 66 => BoidRole::Scout(2),
+            x if x >= 33 => BoidRole::Scout(1),
+            x if x >= 0 => BoidRole::Common,
             _ => BoidRole::Common,
         };
 
