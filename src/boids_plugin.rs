@@ -3,6 +3,13 @@ use bevy_inspector_egui::prelude::*;
 use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use rand::Rng;
 
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
+enum AppState {
+    #[default]
+    Running,
+    Paused,
+}
+
 pub struct BoidsPlugin;
 
 impl Plugin for BoidsPlugin {
@@ -11,8 +18,14 @@ impl Plugin for BoidsPlugin {
             .insert_resource(Settings {
                 ..Default::default()
             })
+            .add_state::<AppState>()
             .add_systems(Startup, (spawn_camera, spawn_boids))
-            .add_systems(Update, (move_boids, project_positions.after(move_boids)))
+            .add_systems(Update, check_keyboard_input)
+            .add_systems(
+                Update,
+                (move_boids, project_positions.after(move_boids))
+                    .run_if(in_state(AppState::Running)),
+            )
             .add_plugins(ResourceInspectorPlugin::<Settings>::new());
     }
 }
@@ -365,5 +378,18 @@ fn move_boids(
             compute_new_speed(&mut boid, &settings);
             compute_new_position(&mut boid, (width as f32, height as f32));
         }
+    }
+}
+
+fn check_keyboard_input(
+    keyboard_input: Res<Input<KeyCode>>,
+    app_state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::P) {
+        match app_state.get() {
+            AppState::Paused => next_state.set(AppState::Running),
+            _ => next_state.set(AppState::Paused),
+        };
     }
 }
