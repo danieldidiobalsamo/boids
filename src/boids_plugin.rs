@@ -1,29 +1,44 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy_inspector_egui::prelude::*;
+use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use rand::Rng;
 
 pub struct BoidsPlugin;
 
 impl Plugin for BoidsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Settings {
-            ..Default::default()
-        })
-        .add_systems(Startup, (spawn_camera, spawn_boids))
-        .add_systems(Update, (move_boids, project_positions.after(move_boids)));
+        app.register_type::<Settings>()
+            .insert_resource(Settings {
+                ..Default::default()
+            })
+            .add_systems(Startup, (spawn_camera, spawn_boids))
+            .add_systems(Update, (move_boids, project_positions.after(move_boids)))
+            .add_plugins(ResourceInspectorPlugin::<Settings>::new());
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Reflect, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
 struct Settings {
+    #[inspector(min = 100, max = 100)]
     nb_boids: u32,
+    #[inspector(min = 0., max = 1., speed = 0.01)]
     turn_factor: f32,
+    #[inspector(min = 0, max = 100, speed = 1.)]
     visual_range: u32,
+    #[inspector(min = 0, max = 20, speed = 1.)]
     protected_range: u32,
+    #[inspector(min = 0., max = 0.0005, speed = 0.0001)]
     centering_factor: f32,
+    #[inspector(min = 0., max = 1., speed = 0.01)]
     avoid_factor: f32,
+    #[inspector(min = 0., max = 0.7, speed = 0.01)]
     matching_factor: f32,
+    #[inspector(min = 3., max = 10., speed = 1.)]
     max_speed: f32,
+    #[inspector(min = 1., max = 10., speed = 1.)]
     min_speed: f32,
+    #[inspector(min = 0., max = 0.01, speed = 0.001)]
     bias: f32,
 }
 
@@ -62,7 +77,7 @@ impl Default for Settings {
             turn_factor: 0.2,
             visual_range: 40,
             protected_range: 10,
-            centering_factor: 0.0005,
+            centering_factor: 0.0002,
             avoid_factor: 0.05,
             matching_factor: 0.5,
             max_speed: 10.,
