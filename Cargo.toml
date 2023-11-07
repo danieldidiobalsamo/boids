@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 # TODO : remove dynamic_linking for release
-bevy = { version = "0.11.0", features = ["dynamic_linking"] }
+bevy = { version = "0.11.0" }
 bevy-inspector-egui = "0.19"
 rand = "0.8.5"
 
