@@ -30,27 +30,38 @@ impl Plugin for BoidsPlugin {
     }
 }
 
+/// Simulation settings; everything can be updated through UI except the number of boids
 #[derive(Resource, Reflect, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
 struct Settings {
+    /// Number of boids
     #[inspector(min = 100, max = 100)]
     nb_boids: u32,
+    /// Boids ability to turn fast
     #[inspector(min = 0., max = 1., speed = 0.01)]
     turn_factor: f32,
+    /// Radius (in px) of the circle in which boids can see
     #[inspector(min = 0, max = 100, speed = 1.)]
     visual_range: u32,
+    /// Radius (in px) of the circle in which boids wants to be alone
     #[inspector(min = 0, max = 20, speed = 1.)]
     protected_range: u32,
+    /// Cohesion rule : boids move toward the center of mass of their neighbors
     #[inspector(min = 0., max = 0.0005, speed = 0.0001)]
     centering_factor: f32,
+    /// Separation rule: boids move away from other boids that are in protected range
     #[inspector(min = 0., max = 1., speed = 0.01)]
     avoid_factor: f32,
+    /// Alignment rule: boids try to match the average velocity of boids located in its visual range
     #[inspector(min = 0., max = 0.7, speed = 0.01)]
     matching_factor: f32,
+    /// Max boids speed
     #[inspector(min = 3., max = 10., speed = 1.)]
     max_speed: f32,
+    /// Min boids speed
     #[inspector(min = 1., max = 10., speed = 1.)]
     min_speed: f32,
+    /// Some boids are searching for food, and are not exactly following the flock
     #[inspector(min = 0., max = 0.01, speed = 0.001)]
     bias: f32,
 }
@@ -72,9 +83,16 @@ impl Default for Settings {
     }
 }
 
+/// Different kind of boids
 #[derive(Component, Debug)]
 enum BoidRole {
+    /// No specific role, the boid just follows the flock
     Common,
+    /// Scouts try to find food and don't exactly follow the flock
+    ///
+    /// group 1 tends to search on the right
+    ///
+    /// group 2 tends to search on the left
     Scout(u8),
 }
 
@@ -154,13 +172,21 @@ fn spawn_boids(
     }
 }
 
+/// Describes what a boid sees within visual range
 struct BoidEstimate {
+    /// average x position of neighboring boids
     xpos_avg: f32,
+    /// average y position of neighboring boids
     ypos_avg: f32,
+    /// average vx velocity of neighboring boids
     xvel_avg: f32,
+    /// average vy velocity of neighboring boids
     yvel_avg: f32,
+    /// number of boids withing visual range
     neighboring_boids: u32,
+    /// closest boid x coord
     close_dx: f32,
+    /// closest boid y coord
     close_dy: f32,
 }
 
