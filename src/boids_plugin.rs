@@ -385,11 +385,14 @@ fn check_keyboard_input(
     keyboard_input: Res<Input<KeyCode>>,
     app_state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
+    mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::P) {
         match app_state.get() {
             AppState::Paused => next_state.set(AppState::Running),
             _ => next_state.set(AppState::Paused),
         };
+    } else if keyboard_input.just_pressed(KeyCode::Q) {
+        app_exit_events.send(bevy::app::AppExit);
     }
 }
