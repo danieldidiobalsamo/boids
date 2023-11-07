@@ -55,34 +55,6 @@ struct Settings {
     bias: f32,
 }
 
-impl Settings {
-    fn new(
-        nb_boids: u32,
-        turn_factor: f32,
-        visual_range: u32,
-        protected_range: u32,
-        centering_factor: f32,
-        avoid_factor: f32,
-        matching_factor: f32,
-        max_speed: f32,
-        min_speed: f32,
-        bias: f32,
-    ) -> Self {
-        Self {
-            nb_boids,
-            turn_factor,
-            visual_range,
-            protected_range,
-            centering_factor,
-            avoid_factor,
-            matching_factor,
-            max_speed,
-            min_speed,
-            bias,
-        }
-    }
-}
-
 impl Default for Settings {
     fn default() -> Self {
         Self {
