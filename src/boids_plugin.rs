@@ -236,7 +236,16 @@ fn evaluate_situation(
     }
 }
 
-fn apply_cohesion_and_alignment(
+fn set_average_speed_and_pos(estimate: &mut BoidEstimate) {
+    let neighboring_boids = estimate.neighboring_boids as f32;
+
+    estimate.xpos_avg /= neighboring_boids;
+    estimate.ypos_avg /= neighboring_boids;
+    estimate.xvel_avg /= neighboring_boids;
+    estimate.yvel_avg /= neighboring_boids;
+}
+
+fn apply_cohesion(
     current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
     estimate: &mut BoidEstimate,
     settings: &Res<Settings>,
@@ -245,22 +254,24 @@ fn apply_cohesion_and_alignment(
     let centering_factor = settings.centering_factor;
     let matching_factor = settings.matching_factor;
 
-    // if some boids are in the visual range
-    if estimate.neighboring_boids > 0 {
-        let neighboring_boids = estimate.neighboring_boids as f32;
+    v.0.x += (estimate.xpos_avg - pos.0.x) * centering_factor
+        + (estimate.xvel_avg - v.0.x) * matching_factor;
 
-        // divide average pos / velocity by number of boids in visual range
-        estimate.xpos_avg /= neighboring_boids;
-        estimate.ypos_avg /= neighboring_boids;
-        estimate.xvel_avg /= neighboring_boids;
-        estimate.yvel_avg /= neighboring_boids;
+    v.0.y += (estimate.ypos_avg - pos.0.y) * centering_factor
+        + (estimate.yvel_avg - v.0.y) * matching_factor;
+}
 
-        v.0.x += (estimate.xpos_avg - pos.0.x) * centering_factor
-            + (estimate.xvel_avg - v.0.x) * matching_factor;
+fn apply_alignment(
+    current: &mut (Mut<Position>, Mut<Velocity>, &BoidRole),
+    estimate: &mut BoidEstimate,
+    settings: &Res<Settings>,
+) {
+    let (_, v, _) = current;
+    let matching_factor = settings.matching_factor;
 
-        v.0.y += (estimate.ypos_avg - pos.0.y) * centering_factor
-            + (estimate.yvel_avg - v.0.y) * matching_factor;
-    }
+    v.0.x += (estimate.xvel_avg - v.0.x) * matching_factor;
+
+    v.0.y += (estimate.yvel_avg - v.0.y) * matching_factor;
 }
 
 fn apply_avoidance(
@@ -369,8 +380,14 @@ fn move_boids(
         }
 
         for mut boid in &mut boids {
-            apply_cohesion_and_alignment(&mut boid, &mut estimate, &settings);
-            apply_avoidance(&mut boid, &estimate, &settings);
+            if estimate.neighboring_boids > 0 {
+                set_average_speed_and_pos(&mut estimate);
+
+                apply_cohesion(&mut boid, &mut estimate, &settings);
+                apply_alignment(&mut boid, &mut estimate, &settings);
+                apply_avoidance(&mut boid, &estimate, &settings);
+            }
+
             turn_if_edge(&mut boid, (width as f32, height as f32), &settings);
             apply_bias(&mut boid, &settings);
             compute_new_speed(&mut boid, &settings);
