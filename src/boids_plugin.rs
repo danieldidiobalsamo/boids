@@ -35,10 +35,10 @@ impl Plugin for BoidsPlugin {
 #[reflect(Resource, InspectorOptions)]
 struct Settings {
     /// Number of boids
-    #[inspector(min = 100, max = 100)]
+    #[inspector(min = 400, max = 400)]
     nb_boids: u32,
     /// Boids ability to turn fast
-    #[inspector(min = 0., max = 1., speed = 0.01)]
+    #[inspector(min = 0., max = 2., speed = 0.01)]
     turn_factor: f32,
     /// Radius (in px) of the circle in which boids can see
     #[inspector(min = 0, max = 100, speed = 1.)]
@@ -47,13 +47,13 @@ struct Settings {
     #[inspector(min = 0, max = 20, speed = 1.)]
     protected_range: u32,
     /// Cohesion rule : boids move toward the center of mass of their neighbors
-    #[inspector(min = 0., max = 0.0005, speed = 0.0001)]
+    #[inspector(min = 0., max = 0.001, speed = 0.0001)]
     centering_factor: f32,
     /// Separation rule: boids move away from other boids that are in protected range
-    #[inspector(min = 0., max = 1., speed = 0.01)]
+    #[inspector(min = 0., max = 0.2, speed = 0.01)]
     avoid_factor: f32,
     /// Alignment rule: boids try to match the average velocity of boids located in its visual range
-    #[inspector(min = 0., max = 0.7, speed = 0.01)]
+    #[inspector(min = 0., max = 0.3, speed = 0.001)]
     matching_factor: f32,
     /// Max boids speed
     #[inspector(min = 3., max = 10., speed = 1.)]
@@ -62,29 +62,29 @@ struct Settings {
     #[inspector(min = 1., max = 10., speed = 1.)]
     min_speed: f32,
     /// Some boids are searching for food, and are not exactly following the flock
-    #[inspector(min = 0., max = 0.01, speed = 0.001)]
+    #[inspector(min = 0., max = 0.1, speed = 0.001)]
     bias: f32,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            nb_boids: 100,
+            nb_boids: 400,
             turn_factor: 0.2,
             visual_range: 40,
-            protected_range: 10,
-            centering_factor: 0.0002,
+            protected_range: 8,
+            centering_factor: 0.0005,
             avoid_factor: 0.05,
-            matching_factor: 0.5,
-            max_speed: 10.,
-            min_speed: 2.,
-            bias: 0.005,
+            matching_factor: 0.05,
+            max_speed: 6.,
+            min_speed: 3.,
+            bias: 0.001,
         }
     }
 }
 
 /// Different kind of boids
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 enum BoidRole {
     /// No specific role, the boid just follows the flock
     Common,
@@ -99,10 +99,10 @@ enum BoidRole {
 #[derive(Component, Debug)]
 struct Boid;
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 struct Position(Vec3);
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 struct Velocity(Vec3);
 
 #[derive(Bundle)]
@@ -140,7 +140,7 @@ fn spawn_boids(
     mut materials: ResMut<Assets<ColorMaterial>>,
     settings: Res<Settings>,
 ) {
-    let mesh = Mesh::from(shape::Circle::new(4.));
+    let mesh = Mesh::from(shape::Circle::new(2.));
     let material = ColorMaterial::from(Color::rgb(1., 1., 1.));
 
     let mesh_handle = meshes.add(mesh);
@@ -148,13 +148,13 @@ fn spawn_boids(
 
     for _ in 0..settings.nb_boids as u32 {
         let pos = Vec2::new(
-            rand::thread_rng().gen_range(100..=300) as f32,
-            rand::thread_rng().gen_range(100..=300) as f32,
+            rand::thread_rng().gen_range(-500..=300) as f32,
+            rand::thread_rng().gen_range(-500..=300) as f32,
         );
 
         let role = match rand::thread_rng().gen_range(0..=100) {
-            x if x >= 66 => BoidRole::Scout(2),
-            x if x >= 33 => BoidRole::Scout(1),
+            x if x >= 95 => BoidRole::Scout(2),
+            x if x >= 90 => BoidRole::Scout(1),
             x if x >= 0 => BoidRole::Common,
             _ => BoidRole::Common,
         };
@@ -205,8 +205,8 @@ impl BoidEstimate {
 }
 
 fn evaluate_situation(
-    current: &(&Position, &Velocity, &BoidRole),
-    other: &(&Position, &Velocity, &BoidRole),
+    current: &(Mut<Position>, Mut<Velocity>, &BoidRole),
+    other: &(Position, Velocity, BoidRole),
     estimate: &mut BoidEstimate,
     settings: &Res<Settings>,
 ) {
@@ -296,15 +296,15 @@ fn turn_if_edge(
     let (width, height) = screen_dimensions;
     let turn_factor = settings.turn_factor;
 
-    if x <= -width / 2. {
+    if x <= -width / 2. + 200. {
         v.0.x += turn_factor;
-    } else if x >= width / 2. {
+    } else if x >= width / 2. - 200. {
         v.0.x -= turn_factor;
     }
 
-    if y <= -height / 2. {
+    if y <= -height / 2. + 200. {
         v.0.y += turn_factor;
-    } else if y >= height / 2. {
+    } else if y >= height / 2. - 200. {
         v.0.y -= turn_factor;
     }
 }
@@ -371,15 +371,27 @@ fn move_boids(
     if let Ok(window) = window.get_single() {
         let (width, height) = (window.resolution.width(), window.resolution.height());
 
-        let mut combinations = boids.iter_combinations();
+        /*
+            Here the only solution is to clone query results, here's why :
+            - boids.iter_combinations() would return 1:1 comparisons, while boids algo needs 1:others for each boid
+            - using RefCell would imply to use RefCell<&Position, &Velocity, &BoidRole> : since
+            RefCell wouldn't hold an owned value here, this doesn't solve the issue
+            - pushing updated values in a Vec, and updating boids after the nested "for" loops would result
+            in boids considering static flock during iteration, and not previously updated neighbors (moving).
+            This would create less accurate simulation and more "solid shape" appearance.
 
-        let mut estimate = BoidEstimate::new();
-        while let Some([current, other]) = combinations.fetch_next() {
-            evaluate_situation(&current, &other, &mut estimate, &settings);
-            evaluate_situation(&other, &current, &mut estimate, &settings);
-        }
+        */
+        let tmp = boids
+            .iter()
+            .map(|x| (x.0.clone(), x.1.clone(), x.2.clone()))
+            .collect::<Vec<(Position, Velocity, BoidRole)>>();
 
-        for mut boid in &mut boids {
+        for mut boid in boids.iter_mut() {
+            let mut estimate = BoidEstimate::new();
+            for other in tmp.iter() {
+                evaluate_situation(&boid, other, &mut estimate, &settings);
+            }
+
             if estimate.neighboring_boids > 0 {
                 set_average_speed_and_pos(&mut estimate);
 
