@@ -1,3 +1,5 @@
+![](examples/example.mp4)
+
 # About
 
 Rust boids simulation using Reynolds model running with Bevy engine.
