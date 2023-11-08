@@ -1,3 +1,5 @@
+[![](examples/example.mp4)](https://github.com/danieldidiobalsamo/boids/assets/79797812/e9cdbb0d-116d-457f-9a6a-018f6e9f4acd)
+
 # About
 
 Rust boids simulation using Reynolds model running with Bevy engine.
