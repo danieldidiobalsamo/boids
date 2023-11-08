@@ -71,9 +71,9 @@ impl Default for Settings {
         Self {
             nb_boids: 400,
             turn_factor: 0.2,
-            visual_range: 40,
+            visual_range: 45,
             protected_range: 8,
-            centering_factor: 0.0005,
+            centering_factor: 0.0003,
             avoid_factor: 0.05,
             matching_factor: 0.05,
             max_speed: 6.,
