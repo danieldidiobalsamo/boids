@@ -1158,7 +1158,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "boids"
+name = "boids_rs_bevy"
 version = "0.1.0"
 dependencies = [
  "bevy",
