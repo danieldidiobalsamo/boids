@@ -1,7 +1,13 @@
 [package]
-name = "boids"
+name = "boids_rs_bevy"
 version = "0.1.0"
 edition = "2021"
+description = "Rust boids simulation using Reynolds model running with Bevy engine"
+license = "GPL-3.0-or-later"
+keywords = ["boids", "simulation", "bevy"]
+categories = ["simulation", "game-development"]
+readme = "README.md"
+repository = "https://github.com/danieldidiobalsamo/boids"
 
 [dependencies]
 bevy = { version = "0.11.0" }
