@@ -21,7 +21,7 @@ Press 'Q' to leave.
 # How to launch
 ## Using cargo (recommended)
 
-Make sure cargo is installed and then just launch:
+Install [bevy dependencies](https://github.com/bevyengine/bevy/blob/main/docs/linux_dependencies.md) and then just launch:
 ~~~
 cargo install boids_rs_bevy
 boids_rs_bevy
@@ -31,7 +31,7 @@ boids_rs_bevy
 
 Firstly, install [bevy dependencies](https://github.com/bevyengine/bevy/blob/main/docs/linux_dependencies.md)
 
-Then 
+Then clone this repository and launch :
 ~~~
 cargo run --release
 ~~~
