@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_inspector_egui::prelude::*;
 use bevy_inspector_egui::quick::ResourceInspectorPlugin;
@@ -146,7 +148,7 @@ fn spawn_boids(
     let mesh_handle = meshes.add(mesh);
     let material_handle = materials.add(material);
 
-    for _ in 0..settings.nb_boids as u32 {
+    for _ in 0..settings.nb_boids {
         let pos = Vec2::new(
             rand::thread_rng().gen_range(-500..=300) as f32,
             rand::thread_rng().gen_range(-500..=300) as f32,
@@ -400,10 +402,10 @@ fn move_boids(
                 apply_avoidance(&mut boid, &estimate, &settings);
             }
 
-            turn_if_edge(&mut boid, (width as f32, height as f32), &settings);
+            turn_if_edge(&mut boid, (width, height), &settings);
             apply_bias(&mut boid, &settings);
             compute_new_speed(&mut boid, &settings);
-            compute_new_position(&mut boid, (width as f32, height as f32));
+            compute_new_position(&mut boid, (width, height));
         }
     }
 }
