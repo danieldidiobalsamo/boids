@@ -18,7 +18,7 @@ impl Plugin for BoidsPlugin {
             .insert_resource(Settings {
                 ..Default::default()
             })
-            .add_state::<AppState>()
+            .insert_state(AppState::Running)
             .add_systems(Startup, (spawn_camera, spawn_boids))
             .add_systems(Update, check_keyboard_input)
             .add_systems(
@@ -140,8 +140,8 @@ fn spawn_boids(
     mut materials: ResMut<Assets<ColorMaterial>>,
     settings: Res<Settings>,
 ) {
-    let mesh = Mesh::from(shape::Circle::new(2.));
-    let material = ColorMaterial::from(Color::rgb(1., 1., 1.));
+    let mesh = Mesh::from(Circle::new(2.));
+    let material = ColorMaterial::from(Color::srgb(1., 1., 1.));
 
     let mesh_handle = meshes.add(mesh);
     let material_handle = materials.add(material);
@@ -409,17 +409,17 @@ fn move_boids(
 }
 
 fn check_keyboard_input(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     app_state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
-    mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
+    mut exit: EventWriter<AppExit>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::P) {
+    if keyboard_input.just_pressed(KeyCode::KeyP) {
         match app_state.get() {
             AppState::Paused => next_state.set(AppState::Running),
             _ => next_state.set(AppState::Paused),
         };
-    } else if keyboard_input.just_pressed(KeyCode::Q) {
-        app_exit_events.send(bevy::app::AppExit);
+    } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
+        exit.send(AppExit::Success);
     }
 }
